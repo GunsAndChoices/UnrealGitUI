@@ -41,4 +41,4 @@ def get_last_release(repo_name: str):
 def get_last_x_commits(repo_name: str, x: int = 5):
     repo = GIT_CLIENT.get_repo(repo_name)
     commits = repo.get_commits()
-    return commits[:x]
+    return commits

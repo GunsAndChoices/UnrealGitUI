@@ -1,8 +1,8 @@
-import glob
 import os
 import threading
 import time
 import customtkinter as ctk
+from CTkTable import CTkTable
 from github.GitRelease import GitRelease
 from main._template import LOGGER
 from main.ctk_external_modules.CTkCollapsibleFrame import CTkCollapsiblePanel
@@ -118,12 +118,26 @@ class DashboardUI(ctk.CTkFrame):
     def load_data(self):
         LOGGER.info("Loading dashboard data...")
         
+        REPO = "{}/{}".format(CONFIG['git']['user'], CONFIG['git']['repo'])
+        
         # Status Frame
-        status_data: dict[str, str | int] = get_repo_info("{}/{}".format(CONFIG['git']['user'], CONFIG['git']['repo']))
-        status_data['commits'] = get_commits_since("{}/{}".format(CONFIG['git']['user'], CONFIG['git']['repo']), since_datetime=None).totalCount
-        status_data['prs'] = get_prs("{}/{}".format(CONFIG['git']['user'], CONFIG['git']['repo']), since_datetime=None).__len__()
-        last_release: None | GitRelease = get_last_release("{}/{}".format(CONFIG['git']['user'], CONFIG['git']['repo']))
+        status_data: dict[str, str | int] = get_repo_info(REPO)
+        status_data['commits'] = get_commits_since(REPO, since_datetime=None).totalCount
+        status_data['prs'] = get_prs("{}/{}".format(CONFIG['git']['user'], CONFIG['git']['repo']))
+        last_release: None | GitRelease = get_last_release(REPO)
         status_data['last_release'] = str(last_release) if last_release else "N/A"
         LOGGER.debug("Status Data: {}".format(status_data))
+        
+        # Table displaying last 5 commits in commit_table_frame
+        all_commits = get_last_x_commits(REPO, 5)
+        for commit in all_commits:
+            LOGGER.info((commit.last_modified, commit.stats))
+        
+        
+        # Displaying Status Data in a Table in status_frame
+        ...
+        
+        # Displaying last Commit and Last Commit Details
+        ...
         
         LOGGER.info("Dashboard data loaded.")

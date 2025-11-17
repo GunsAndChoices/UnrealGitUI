@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.11"
 
 [[package]]
@@ -271,6 +271,18 @@ wheels = [
 ]
 
 [[package]]
+name = "ctktable"
+version = "1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "customtkinter" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/72/17/7865e96995857a5056c51cc4997d2a2dadc06d8020079b922c6f6ed320a3/CTkTable-1.1.tar.gz", hash = "sha256:5c749124a888a17d129abb3d0afc9330c7dd5eb02e3bda8ffc6ff7b91461b076", size = 8880, upload-time = "2024-01-14T09:52:46.414Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/70/1a/9dfddc895d7252ecb23546d9b1edbf3960b2aa37550deba8070b8fc3ba97/CTkTable-1.1-py3-none-any.whl", hash = "sha256:a2615004bfb138618001c8b5fbf32accbd0142098cae4fb98d3043ae4e29b4d1", size = 9027, upload-time = "2024-01-14T09:52:44.838Z" },
+]
+
+[[package]]
 name = "customtkinter"
 version = "5.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -527,6 +539,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "black" },
+    { name = "ctktable" },
     { name = "customtkinter" },
     { name = "isort" },
     { name = "pygithub" },
@@ -538,6 +551,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "black", specifier = ">=25.11.0" },
+    { name = "ctktable", specifier = ">=1.1" },
     { name = "customtkinter", specifier = ">=5.2.2" },
     { name = "isort", specifier = ">=7.0.0" },
     { name = "pygithub", specifier = ">=2.8.1" },
