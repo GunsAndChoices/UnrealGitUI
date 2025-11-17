@@ -17,10 +17,26 @@ if not check_config(['app_title', 'git']):
 
 CONFIG = load_config('main/config.json')
 
+#==== Global Functions ====#
+def toggle_mode(event=None):
+    if CONFIG.get("mode", "dark") == "dark":
+        ctk.set_appearance_mode("light")
+        CONFIG['mode'] = "light"
+        save_config("main/config.json", CONFIG)
+    elif CONFIG.get("mode", "dark") == "light":
+        ctk.set_appearance_mode("dark")
+        CONFIG['mode'] = "dark"
+        save_config("main/config.json", CONFIG)
+    else:
+        ctk.set_appearance_mode("light")
+        CONFIG['mode'] = "light"
+        save_config("main/config.json", CONFIG)
+
 #==== MAIN WINDOW ==== #
 rootwin = ctk.CTk()
 rootwin.title(CONFIG.get('app_title', 'ERROR LOADING TITLE'))
 rootwin.geometry("800x930")
+ctk.set_appearance_mode(CONFIG.get("mode", "dark"))
 
 tabs = ctk.CTkTabview(rootwin)
 tabs.pack(expand=True, fill='both', padx=20, pady=20)
@@ -39,6 +55,8 @@ dashboard_ui.pack(expand=True, fill='both')
 terminal_ui: TerminalUI = TerminalUI(terminal_tab)
 terminal_ui.pack(expand=True, fill='both')
 
+#==== Keybinds ====#
+rootwin.bind_all("<Control-Shift-Alt-m>", lambda event: toggle_mode())
 
 def run() -> None:
     rootwin.mainloop()

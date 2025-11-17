@@ -1,8 +1,10 @@
 {
     "app_title": "UnrealGitUI",
+    "mode": "dark",
     "git": {
         "repo": "Guns-And-Choices",
         "user": "mrcool7387",
-        "token": "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"
+        "token": "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",
+        "##comment_{token}##": "Temporary Test Token"
     }
 }

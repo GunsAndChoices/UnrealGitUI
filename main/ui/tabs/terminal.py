@@ -149,6 +149,11 @@ class TerminalUI(ctk.CTkFrame):
         self._reader_thread.start()
 
         # Start periodic GUI update
+        
+        font_name = "Consolas"
+        self.textbox.configure(font=(font_name, 12))
+        self.entry.configure(font=(font_name, 12))
+
         self.after(50, self._poll_output)
 
         # Ensure focus on entry
@@ -216,7 +221,7 @@ class TerminalUI(ctk.CTkFrame):
             return
         # Send the command to the PTY (append newline)
         try:
-            to_send = (cmd + "\n")
+            to_send = (cmd + "\r\n")
             # write expects bytes or str depending on API
             try:
                 self._proc.write(to_send)

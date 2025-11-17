@@ -21,15 +21,16 @@ def get_repo_info(repo_name: str):
     
 def get_commits_since(repo_name: str, since_datetime):
     repo = GIT_CLIENT.get_repo(repo_name)
-    commits = repo.get_commits(since=since_datetime)
+    if since_datetime is None:
+        commits = repo.get_commits()
+    else:
+        commits = repo.get_commits(since=since_datetime)
     return commits
 
-def get_prs(repo_name: str, since_datetime):
+def get_prs(repo_name: str):
     repo = GIT_CLIENT.get_repo(repo_name)
     prs = repo.get_pulls(state='all', sort='created', direction='desc')
-    recent_prs = [pr for pr in prs if pr.created_at >= since_datetime]
-    return recent_prs
-
+    return prs.totalCount
 def get_last_release(repo_name: str):
     repo = GIT_CLIENT.get_repo(repo_name)
     releases = repo.get_releases()
