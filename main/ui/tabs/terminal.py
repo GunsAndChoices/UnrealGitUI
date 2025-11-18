@@ -124,6 +124,10 @@ class TerminalUI(ctk.CTkFrame):
         # Text widget (CTkTextbox wraps tkinter.Text and supports tags)
         self.textbox = ctk.CTkTextbox(self, wrap="none")
         self.textbox.pack(fill="both", expand=True, padx=8, pady=8)
+        
+        # --- ÄNDERUNG 1: Initial sperren ---
+        self.textbox.configure(state="disabled") 
+        # -----------------------------------
 
         # Configure tags for colors / attributes
         self._configure_tags()
@@ -133,30 +137,20 @@ class TerminalUI(ctk.CTkFrame):
         self.entry.pack(fill="x", padx=8, pady=(0,8))
         self.entry.bind("<Return>", self._on_enter)
 
-        # Thread safe queue for output chunks
+        # ... (Rest von __init__ bleibt gleich) ...
         self._q = queue.Queue()
-
-        # Start pty
         self._pty = winpty.PtyProcess
         self._proc = self._pty.spawn(shell_cmd)
-
-        # Parser instance
         self._parser = AnsiTextParser()
-
-        # Reader thread
         self._running = True
         self._reader_thread = threading.Thread(target=self._reader_loop, daemon=True)
         self._reader_thread.start()
 
-        # Start periodic GUI update
-        
         font_name = "Consolas"
         self.textbox.configure(font=(font_name, 12))
         self.entry.configure(font=(font_name, 12))
 
         self.after(50, self._poll_output)
-
-        # Ensure focus on entry
         self.entry.focus_set()
 
     def _configure_tags(self):
@@ -197,6 +191,11 @@ class TerminalUI(ctk.CTkFrame):
         try:
             while True:
                 chunk = self._q.get_nowait()
+                
+                # --- ÄNDERUNG 2: Kurzzeitig entsperren (Unlock) ---
+                self.textbox.configure(state="normal")
+                # --------------------------------------------------
+
                 # Parse ANSI and insert with tags
                 for txt, tags in self._parser.feed(chunk):
                     if txt:
@@ -209,8 +208,14 @@ class TerminalUI(ctk.CTkFrame):
                         else:
                             self.textbox.insert("end", txt)
                         self.textbox.see("end")
+
+                # --- ÄNDERUNG 3: Sofort wieder sperren (Lock) ---
+                self.textbox.configure(state="disabled")
+                # ------------------------------------------------
+
         except queue.Empty:
             pass
+        
         # schedule next poll
         if self._running:
             self.after(50, self._poll_output)
