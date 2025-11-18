@@ -5,37 +5,38 @@ Works with pywinpty output that contains escape sequences (Clink, prompts, etc.)
 """
 
 import os
+import queue
 import re
 import threading
-import queue
+
 import customtkinter as ctk
 import winpty
 
 # ANSI SGR regex (matches sequences like \x1b[31m or \x1b[1;32m)
-SGR_RE = re.compile(r'\x1b\[((?:\d{1,3};?)+)m')
+SGR_RE = re.compile(r"\x1b\[((?:\d{1,3};?)+)m")
 # OSC (Operating System Command) sequences like ESC ] 0;title BEL or ESC ] 0;title ESC \
-OSC_RE = re.compile(r'\x1b\].*?(?:\x07|\x1b\\)')
+OSC_RE = re.compile(r"\x1b\].*?(?:\x07|\x1b\\)")
 # Other CSI / control sequences (cursor moves, erase, etc.) - remove conservative set
-CSI_RE = re.compile(r'\x1b\[[:<>?=\d;]*[A-Za-z]')
+CSI_RE = re.compile(r"\x1b\[[:<>?=\d;]*[A-Za-z]")
 
 # Map common SGR color codes to tkinter tag names / colors (basic)
 SGR_COLOR_MAP = {
-    30: ("fg_black",   "#000000"),
-    31: ("fg_red",     "#ff5555"),
-    32: ("fg_green",   "#50fa7b"),
-    33: ("fg_yellow",  "#f1fa8c"),
-    34: ("fg_blue",    "#6272a4"),
+    30: ("fg_black", "#000000"),
+    31: ("fg_red", "#ff5555"),
+    32: ("fg_green", "#50fa7b"),
+    33: ("fg_yellow", "#f1fa8c"),
+    34: ("fg_blue", "#6272a4"),
     35: ("fg_magenta", "#ff79c6"),
-    36: ("fg_cyan",    "#8be9fd"),
-    37: ("fg_white",   "#f8f8f2"),
-    90: ("fg_bright_black",   "#44475a"),
-    91: ("fg_bright_red",     "#ff6e6e"),
-    92: ("fg_bright_green",   "#69ff94"),
-    93: ("fg_bright_yellow",  "#ffffa5"),
-    94: ("fg_bright_blue",    "#caa9ff"),
+    36: ("fg_cyan", "#8be9fd"),
+    37: ("fg_white", "#f8f8f2"),
+    90: ("fg_bright_black", "#44475a"),
+    91: ("fg_bright_red", "#ff6e6e"),
+    92: ("fg_bright_green", "#69ff94"),
+    93: ("fg_bright_yellow", "#ffffa5"),
+    94: ("fg_bright_blue", "#caa9ff"),
     95: ("fg_bright_magenta", "#ff92df"),
-    96: ("fg_bright_cyan",    "#9aedfe"),
-    97: ("fg_bright_white",   "#ffffff"),
+    96: ("fg_bright_cyan", "#9aedfe"),
+    97: ("fg_bright_white", "#ffffff"),
 }
 
 # Basic attributes
@@ -44,15 +45,17 @@ ATTR_ITALIC = 3  # rarely supported in terminals
 ATTR_UNDERLINE = 4
 ATTR_RESET = 0
 
+
 def parse_sgr_parts(sgr_code_str):
     """Return list of int codes from SGR parameter string like '1;31' -> [1,31]"""
     parts = []
-    for p in sgr_code_str.split(';'):
+    for p in sgr_code_str.split(";"):
         try:
             parts.append(int(p))
         except ValueError:
             pass
     return parts
+
 
 class AnsiTextParser:
     """
@@ -60,6 +63,7 @@ class AnsiTextParser:
     It strips OSC and many CSI sequences, and processes SGR color/bold/reset.
     Not a full terminal emulator — enough for colored prompts and outputs.
     """
+
     def __init__(self):
         self.reset_state()
 
@@ -80,8 +84,8 @@ class AnsiTextParser:
 
     def feed(self, text):
         # First remove OSC and many cursor-control CSI sequences
-        text = OSC_RE.sub('', text)
-        text = CSI_RE.sub('', text)
+        text = OSC_RE.sub("", text)
+        text = CSI_RE.sub("", text)
 
         # Now iterate over SGR sequences
         pos = 0
@@ -117,6 +121,7 @@ class AnsiTextParser:
         if pos < len(text):
             yield text[pos:], self._make_tags()
 
+
 class TerminalUI(ctk.CTkFrame):
     def __init__(self, master, shell_cmd="cmd.exe /Q", **kwargs):
         super().__init__(master, **kwargs)
@@ -124,9 +129,9 @@ class TerminalUI(ctk.CTkFrame):
         # Text widget (CTkTextbox wraps tkinter.Text and supports tags)
         self.textbox = ctk.CTkTextbox(self, wrap="none")
         self.textbox.pack(fill="both", expand=True, padx=8, pady=8)
-        
+
         # --- ÄNDERUNG 1: Initial sperren ---
-        self.textbox.configure(state="disabled") 
+        self.textbox.configure(state="disabled")
         # -----------------------------------
 
         # Configure tags for colors / attributes
@@ -134,7 +139,7 @@ class TerminalUI(ctk.CTkFrame):
 
         # Entry for user input
         self.entry = ctk.CTkEntry(self, placeholder_text="Befehl eingeben...")
-        self.entry.pack(fill="x", padx=8, pady=(0,8))
+        self.entry.pack(fill="x", padx=8, pady=(0, 8))
         self.entry.bind("<Return>", self._on_enter)
 
         # ... (Rest von __init__ bleibt gleich) ...
@@ -176,9 +181,9 @@ class TerminalUI(ctk.CTkFrame):
                     # Ensure it's a python string
                     if isinstance(data, bytes):
                         try:
-                            data = data.decode('utf-8', errors='replace')
+                            data = data.decode("utf-8", errors="replace")
                         except Exception:
-                            data = data.decode('latin1', errors='replace')
+                            data = data.decode("latin1", errors="replace")
                     self._q.put(data)
                 else:
                     # small sleep to avoid busy loop if read() returns empty
@@ -191,7 +196,7 @@ class TerminalUI(ctk.CTkFrame):
         try:
             while True:
                 chunk = self._q.get_nowait()
-                
+
                 # --- ÄNDERUNG 2: Kurzzeitig entsperren (Unlock) ---
                 self.textbox.configure(state="normal")
                 # --------------------------------------------------
@@ -200,7 +205,7 @@ class TerminalUI(ctk.CTkFrame):
                 for txt, tags in self._parser.feed(chunk):
                     if txt:
                         # Replace carriage returns that attempt to move cursor; keep newlines
-                        txt = txt.replace('\r', '')
+                        txt = txt.replace("\r", "")
                         # Insert preserving tags
                         if tags:
                             # Insert with multiple tags
@@ -215,7 +220,7 @@ class TerminalUI(ctk.CTkFrame):
 
         except queue.Empty:
             pass
-        
+
         # schedule next poll
         if self._running:
             self.after(50, self._poll_output)
@@ -226,13 +231,13 @@ class TerminalUI(ctk.CTkFrame):
             return
         # Send the command to the PTY (append newline)
         try:
-            to_send = (cmd + "\r\n")
+            to_send = cmd + "\r\n"
             # write expects bytes or str depending on API
             try:
                 self._proc.write(to_send)
             except TypeError:
                 # maybe expects bytes
-                self._proc.write(to_send.encode('utf-8'))
+                self._proc.write(to_send.encode("utf-8"))
         except Exception:
             pass
         # echo command optionally to the textbox (some shells already echo)

@@ -1,15 +1,25 @@
 import os
 import threading
 import time
+
 import customtkinter as ctk
 from CTkTable import CTkTable
 from github.GitRelease import GitRelease
-from main._template import LOGGER
-from main.ctk_external_modules.CTkCollapsibleFrame import CTkCollapsiblePanel
-from main.github_tools.dashboard import get_repo_info, get_last_commit, get_commits_since, get_prs, get_last_release, get_last_x_commits
-from main.config import load_config
 
-CONFIG = load_config('main/config.json')
+from main._template import LOGGER
+from main.config import load_config
+from main.ctk_external_modules.CTkCollapsibleFrame import CTkCollapsiblePanel
+from main.github_tools.dashboard import (
+    get_commits_since,
+    get_last_commit,
+    get_last_release,
+    get_last_x_commits,
+    get_prs,
+    get_repo_info,
+)
+
+CONFIG = load_config("main/config.json")
+
 
 class DashboardUI(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
@@ -22,41 +32,63 @@ class DashboardUI(ctk.CTkFrame):
         LOGGER.debug("Status Frame created. {}".format(repr(self.status_frame)))
         self.commit_table_frame = ctk.CTkFrame(self)
         self.commit_table_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
-        LOGGER.debug("Commit Table Frame created. {}".format(repr(self.commit_table_frame)))
+        LOGGER.debug(
+            "Commit Table Frame created. {}".format(repr(self.commit_table_frame))
+        )
 
         # Untere Frames nebeneinander
         self.commit_details_frame = ctk.CTkFrame(self)
         self.commit_details_frame.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
-        LOGGER.debug("Commit Details Frame created. {}".format(repr(self.commit_details_frame)))
+        LOGGER.debug(
+            "Commit Details Frame created. {}".format(repr(self.commit_details_frame))
+        )
         self.start_frame = ctk.CTkFrame(self)
         self.start_frame.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
-        self.start_button = ctk.CTkButton(self.start_frame, text="Start Workflow", command=lambda: LOGGER.info("Start Workflow button clicked"))
+        self.start_button = ctk.CTkButton(
+            self.start_frame,
+            text="Start Workflow",
+            command=lambda: LOGGER.info("Start Workflow button clicked"),
+        )
         self.start_button.pack(padx=20, pady=20)
-        LOGGER.debug("Start Frame and Button created. {}".format(repr(self.start_frame)))
+        LOGGER.debug(
+            "Start Frame and Button created. {}".format(repr(self.start_frame))
+        )
 
         # Collapsible Logs Frame
         self.log_frame = ctk.CTkFrame(self)
-        self.log_frame.grid(row=2, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
+        self.log_frame.grid(
+            row=2, column=0, columnspan=2, padx=10, pady=10, sticky="nsew"
+        )
         LOGGER.debug("Log Frame created. {}".format(repr(self.log_frame)))
-        
-        logs_collapsible: CTkCollapsiblePanel = CTkCollapsiblePanel(self.log_frame, title="Logs")
+
+        logs_collapsible: CTkCollapsiblePanel = CTkCollapsiblePanel(
+            self.log_frame, title="Logs"
+        )
         logs_collapsible.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
-        LOGGER.debug("Logs Collapsible Panel created. {}".format(repr(logs_collapsible)))
+        LOGGER.debug(
+            "Logs Collapsible Panel created. {}".format(repr(logs_collapsible))
+        )
 
         # Scrollbar + Textbox (schwarzer Hintergrund)
         self.log_textbox = ctk.CTkTextbox(
-            logs_collapsible._content_frame, 
-            width=700, 
+            logs_collapsible._content_frame,
+            width=700,
             height=300,
             corner_radius=5,
             fg_color="#1e1e1e",  # dunkelgrau/schwarz
             text_color="white",
-            state="disabled"
+            state="disabled",
         )
-        self.log_textbox.pack(side="left", fill="both", expand=True, padx=(0,0), pady=(0,0))
+        self.log_textbox.pack(
+            side="left", fill="both", expand=True, padx=(0, 0), pady=(0, 0)
+        )
 
         # Scrollbar hinzufügen
-        scrollbar = ctk.CTkScrollbar(logs_collapsible._content_frame, orientation="vertical", command=self.log_textbox.yview)
+        scrollbar = ctk.CTkScrollbar(
+            logs_collapsible._content_frame,
+            orientation="vertical",
+            command=self.log_textbox.yview,
+        )
         scrollbar.pack(side="right", fill="y")
         self.log_textbox.configure(yscrollcommand=scrollbar.set)
 
@@ -66,14 +98,13 @@ class DashboardUI(ctk.CTkFrame):
         self.grid_rowconfigure(2, weight=2)  # Logs größer machen
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
-        
+
         self._stop_log_thread = False
         threading.Thread(target=self.update_logs_loop, daemon=True).start()
         LOGGER.info("Dashboard UI components initialized successfully.")
-        
-        
+
         self.load_data()
-    
+
     def insert_log(self, message: str) -> None:
         self.log_textbox.after(0, self._insert_log_ui, message)
 
@@ -83,10 +114,11 @@ class DashboardUI(ctk.CTkFrame):
         self.log_textbox.configure(state="disabled")
         self.log_textbox.see("end")
 
-    
     def find_latest_log(self):
         files: list[str] = os.listdir("logs/")
-        files: list[str] = [os.path.join("logs/", f) for f in files if f.endswith(".log")]
+        files: list[str] = [
+            os.path.join("logs/", f) for f in files if f.endswith(".log")
+        ]
         if not files:
             return None
         files.sort(key=os.path.getmtime, reverse=True)
@@ -114,40 +146,53 @@ class DashboardUI(ctk.CTkFrame):
                 LOGGER.error(f"Error reading log: {e}")
             time.sleep(1)
 
-
     def load_data(self):
         LOGGER.info("Loading dashboard data...")
-        
-        REPO = "{}/{}".format(CONFIG['git']['user'], CONFIG['git']['repo'])
-        
+
+        REPO = "{}/{}".format(CONFIG["git"]["user"], CONFIG["git"]["repo"])
+
         # Status Frame
         status_data: dict[str, str | int] = get_repo_info(REPO)
-        status_data['commits'] = get_commits_since(REPO, since_datetime=None).totalCount
-        status_data['prs'] = get_prs("{}/{}".format(CONFIG['git']['user'], CONFIG['git']['repo']))
+        status_data["commits"] = get_commits_since(REPO, since_datetime=None).totalCount
+        status_data["prs"] = get_prs(
+            "{}/{}".format(CONFIG["git"]["user"], CONFIG["git"]["repo"])
+        )
         last_release: None | GitRelease = get_last_release(REPO)
-        status_data['last_release'] = str(last_release) if last_release else "N/A"
+        status_data["last_release"] = str(last_release) if last_release else "N/A"
         LOGGER.debug("Status Data: {}".format(status_data))
-        
+
         # Table displaying last 5 commits in commit_table_frame
-        last_five_commits = get_last_x_commits(REPO, CONFIG.get("dashboard", {}).get("last_commits", 5))
+        last_five_commits = get_last_x_commits(
+            REPO, CONFIG.get("dashboard", {}).get("last_commits", 5)
+        )
         table_data: list[list[str]] = [["SHA", "Add", "Del", "Total"]]
         for c in last_five_commits:
-            table_data.append([str(c.sha[10:]) + "...", str(c.stats.additions), str(c.stats.deletions), str(c.stats.total)])
+            table_data.append(
+                [
+                    str(c.sha[10:]) + "...",
+                    str(c.stats.additions),
+                    str(c.stats.deletions),
+                    str(c.stats.total),
+                ]
+            )
 
-        table_label = ctk.CTkLabel(self.commit_table_frame, text=f"Last {CONFIG.get("dashboard", {}).get("last_commits", 5)} Commits", font=("", 14))
+        table_label = ctk.CTkLabel(
+            self.commit_table_frame,
+            text=f"Last {CONFIG.get("dashboard", {}).get("last_commits", 5)} Commits",
+            font=("", 14),
+        )
         table_label.pack(pady=10)
 
         table = CTkTable(self.commit_table_frame, row=6, column=4, values=table_data)
         table.pack(fill="both", padx=5, pady=5, expand=True)
-        
-        #LOGGER.info(list((c.html_url, (c.stats.additions, c.stats.deletions, c.stats.total), i+1) for i, c in enumerate(get_commits_since(REPO, None))))
-        #LOGGER.info(len(list((c.last_modified, c.stats) for c in get_commits_since(REPO, None))))
-        
-        
+
+        # LOGGER.info(list((c.html_url, (c.stats.additions, c.stats.deletions, c.stats.total), i+1) for i, c in enumerate(get_commits_since(REPO, None))))
+        # LOGGER.info(len(list((c.last_modified, c.stats) for c in get_commits_since(REPO, None))))
+
         # Displaying Status Data in a Table in status_frame
         ...
-        
+
         # Displaying last Commit and Last Commit Details
         ...
-        
+
         LOGGER.info("Dashboard data loaded.")
