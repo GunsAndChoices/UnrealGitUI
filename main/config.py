@@ -4,8 +4,9 @@ from dotenv import load_dotenv
 from main.errors import MissingDotEnvFile, MissingGithubToken
 from main._template import LOGGER
 
+
 def load_config(file_path: str) -> dict:
-    with open(file_path, 'r') as file:
+    with open(file_path, "r") as file:
         config = json.load(file)
     if os.path.exists('main/.env'):
         load_dotenv('main/.env')
@@ -19,9 +20,11 @@ def load_config(file_path: str) -> dict:
     LOGGER.info(f'Config loaded: {config}')
     return config
 
+
 def save_config(file_path: str, config: dict) -> None:
-    with open(file_path, 'w') as file:
+    with open(file_path, "w") as file:
         json.dump(config, file, indent=4)
-        
+
+
 def check_config(required_keys: list) -> bool:
-    return all(key in load_config('main/config.json') for key in required_keys)
+    return all(key in load_config("main/config.json") for key in required_keys)

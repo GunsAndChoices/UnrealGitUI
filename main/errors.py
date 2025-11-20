@@ -1,6 +1,8 @@
 class ConfigError(Exception):
     """Exception raised for errors in the configuration."""
+
     pass
+
 
 class PyProjectError(Exception):
     """Exception for pyproject.toml validation errors."""
