@@ -11,6 +11,10 @@
     "paths": {
         "unreal": "C:\\Program Files\\Epic Games\\UE_4.27\\Engine\\Binaries\\Win64\\UE4Editor.exe",
         "unreal_project_file": "C:\\Users\\Alexander Schwarz\\Desktop\\Guns-And-Choices\\Guns_And_Choices.uproject",
-        "git": "C:\\Program Files\\Git\\cmd\\git.exe"
+        "unreal_project": "C:\\Users\\Alexander Schwarz\\Desktop\\Guns-And-Choices",
+        "git": "C:\\Program Files\\Git\\cmd\\git.exe",
+        "sln_file": "C:\\Users\\Alexander Schwarz\\Desktop\\Guns-And-Choices\\Guns_And_Choices.sln",
+        "visual_studio": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\Common7\\IDE\\devenv.exe",
+        "vscode": "C:\\Users\\Alexander Schwarz\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"
     }
 }

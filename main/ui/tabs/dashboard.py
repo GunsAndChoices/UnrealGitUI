@@ -236,3 +236,8 @@ class DashboardUI(ctk.CTkFrame):
 
         
         LOGGER.info("Dashboard data loaded.")
+        
+    def workspace(self):
+        LOGGER.info("Statring Building Workspace")
+        
+        LOGGER.info("Build Workspace Succesfully")

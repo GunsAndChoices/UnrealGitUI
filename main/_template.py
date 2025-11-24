@@ -40,7 +40,7 @@ console_handler.setLevel(logging.DEBUG)
 
 logging.basicConfig(level=logging.DEBUG, handlers=[console_handler, file_handler])
 
-LOGGER = logging.getLogger(_get_project_name())
+LOGGER: logging.Logger = logging.getLogger(_get_project_name())
 LOGGER.debug("Logger initialized.")
 
 

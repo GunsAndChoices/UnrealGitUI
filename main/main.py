@@ -9,10 +9,11 @@ import customtkinter as ctk
 
 from main.config import check_config, load_config, save_config
 from main.errors import ConfigError
-from main.ui.tabs.dashboard import DashboardUI
 
 # ==== IMPORT UI TABS ==== #
+from main.ui.tabs.dashboard import DashboardUI
 from main.ui.tabs.terminal import TerminalUI
+from main.ui.tabs.unreal_tools import UnrealToolsUI
 
 # ==== CONFIGURATION ==== #
 if not check_config(["app_title", "git"]):
@@ -60,6 +61,9 @@ dashboard_ui.pack(expand=True, fill="both")
 
 terminal_ui: TerminalUI = TerminalUI(terminal_tab)
 terminal_ui.pack(expand=True, fill="both")
+
+unreal_tools_ui: UnrealToolsUI = UnrealToolsUI(unreal_tools_tab)
+unreal_tools_ui.pack(expand=True, fill="both")
 
 # ==== Keybinds ====#
 rootwin.bind_all("<Control-Shift-Alt-m>", lambda event: toggle_mode())
