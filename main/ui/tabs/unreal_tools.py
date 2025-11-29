@@ -2,8 +2,12 @@ import os
 import shutil
 import subprocess
 import customtkinter as ctk
+import threading
+
 from main.config import load_config
 from main._template import LOGGER
+from main.ctk_external_modules.CTkCollapsibleFrame import CTkCollapsiblePanel
+
 
 CONFIG = load_config("main/config.json")
 
@@ -12,61 +16,76 @@ class UnrealToolsUI(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
         self.paths = CONFIG.get("paths", {})
+        self.buttons = {} 
 
         # ===== TITLE =====
-        title = ctk.CTkLabel(self, text="Unreal Tools", font=("Segoe UI", 22))
-        title.pack(pady=(10, 15))
-
-        # ===== TEMP BUTTON FRAME =====
-        btn_frame = ctk.CTkFrame(self)
-        btn_frame.pack(fill="x", padx=15, pady=10)
-
-        # Header
-        self.temp_label = ctk.CTkLabel(btn_frame, text="Delete Temporary Folders", font=("", 20))
-        self.temp_label.pack(pady=(0, 10))
-
-        # TEMP BUTTONS
-        self.temp_folders = self._get_temp_folders()
-        self.temp_buttons = {}
-
-        for name, folder in self.temp_folders.items():
-            btn = ctk.CTkButton(
-                btn_frame,
-                text=name,
-                command=lambda f=folder: self.delete_folder(f)
-            )
-            btn.pack(fill="x", padx=5, pady=5)
-            self.temp_buttons[name] = {"button": btn, "folder": folder}
-            LOGGER.debug(f"Temp button created: {name=} {folder=} {btn=}")
+        title = ctk.CTkLabel(self, text="Unreal Engine Tools", font=("Segoe UI", 24, "bold"))
+        title.pack(pady=(10, 15), fill="x")
 
         # ===== PROJECT ACTIONS =====
-        project_frame = ctk.CTkFrame(self)
-        project_frame.pack(fill="x", padx=15, pady=(15, 5))
-
-        self.project_actions = ctk.CTkLabel(project_frame, text="Project Actions", font=("", 20))
-        self.project_actions.pack(pady=(0, 10))
-        
-        self.project_buttons = {}
+        project_panel = CTkCollapsiblePanel(self, title="Project Actions")
+        project_panel.pack(fill="x", padx=15, pady=(0, 10))
 
         project_actions = [
             ("Open in Unreal", self.open_unreal, ["unreal", "unreal_project_file"]),
-            ("Open in Visual Studio", self.open_vs, ["sln_file", "visual_studio"]),
+            ("Open in Visual Studio", self.open_vs, ["sln_file"]),
             ("Open in VSCode", self.open_vscode, ["unreal_project", "vscode"]),
             ("Open Project Folder", self.open_explorer, ["unreal_project"]),
             ("Open in Terminal", self.open_terminal, ["unreal_project"])
         ]
 
         for label, func, keys in project_actions:
-            btn = ctk.CTkButton(
-                project_frame,
-                text=label,
-                command=func
-            )
-            btn.pack(fill="x", padx=30, pady=5)
-            self.project_buttons[label] = {"button": btn, "keys": keys}
+            btn = ctk.CTkButton(project_panel._content_frame, text=label, command=func)
+            btn.pack(fill="x", padx=5, pady=5)
+            self.buttons[label] = {"button": btn, "keys": keys}
+
+        # ===== BUILD TOOLS =====
+        build_panel = CTkCollapsiblePanel(self, title="Build Tools")
+        build_panel.pack(fill="x", padx=15, pady=(0, 10))
+
+        build_actions = [
+            ("Generate Project Files", self.generate_project_files, ["unreal", "unreal_project_file"]),
+            ("Build Project", self.build_project, ["sln_file"]),
+        ]
+
+        for label, func, keys in build_actions:
+            btn = ctk.CTkButton(build_panel._content_frame, text=label, command=func)
+            btn.pack(fill="x", padx=5, pady=5)
+            self.buttons[label] = {"button": btn, "keys": keys}
+
+        # ===== CONFIGURATION =====
+        config_panel = CTkCollapsiblePanel(self, title="Configuration Files")
+        config_panel.pack(fill="x", padx=15, pady=(0, 10))
+
+        config_files = ["DefaultEngine.ini", "DefaultGame.ini", "DefaultInput.ini"]
+        for f in config_files:
+            btn = ctk.CTkButton(config_panel._content_frame, text=f"Open {f}")
+            btn.configure(command=lambda name=f: self.open_config_file(name))
+            btn.pack(fill="x", padx=5, pady=5)
+            # The key for the button is the filename itself for the update logic
+            self.buttons[f] = {"button": btn, "keys": ["unreal_project"]}
+            
+        # ===== TEMPORARY DATA =====
+        temp_panel = CTkCollapsiblePanel(self, title="Temporary Data")
+        temp_panel.pack(fill="x", padx=15, pady=(0, 10))
+        
+        self.temp_folders = self._get_temp_folders()
+        self.temp_buttons = {}
+
+        for name, folder in self.temp_folders.items():
+            btn = ctk.CTkButton(temp_panel._content_frame, text=name)
+            btn.configure(command=lambda f=folder, b=btn, n=name: self.delete_folder_threaded(f, b, n))
+            btn.pack(fill="x", padx=5, pady=5)
+            self.temp_buttons[name] = {"button": btn, "folder": folder}
+
+        delete_all_btn_text = "Delete All Temporary Data"
+        delete_all_btn = ctk.CTkButton(temp_panel._content_frame, text=delete_all_btn_text)
+        delete_all_btn.configure(command=lambda: self.delete_all_temp_threaded(delete_all_btn, delete_all_btn_text))
+        delete_all_btn.pack(fill="x", padx=5, pady=8)
+        self.temp_buttons["Delete All"] = {"button": delete_all_btn, "folder": "any"} # Special case
 
         # Start live updates
-        self._update_buttons()
+        self._update_button_states()
 
     # ===== HELPERS =====
     def _paths_exist(self, keys):
@@ -77,74 +96,134 @@ class UnrealToolsUI(ctk.CTkFrame):
         return True
 
     def _get_temp_folders(self):
-        project = self.paths.get("unreal_project")
-        if not project:
-            return {}
-
+        project_path = self.paths.get("unreal_project")
+        if not project_path: return {}
         user = os.getenv("USERNAME")
-        global_ddc = f"C:/Users/{user}/AppData/Local/UnrealEngine/Common/DerivedDataCache"
-
-        folders = {
-            "Intermediate": os.path.join(project, "Intermediate"),
-            "Saved": os.path.join(project, "Saved"),
-            "DerivedDataCache_Project": os.path.join(project, "DerivedDataCache"),
-            "Binaries": os.path.join(project, "Binaries"),
-            ".vs": os.path.join(project, ".vs"),
-            "DerivedDataCache_Global": global_ddc
+        return {
+            "Intermediate": os.path.join(project_path, "Intermediate"),
+            "Saved": os.path.join(project_path, "Saved"),
+            "DerivedDataCache": os.path.join(project_path, "DerivedDataCache"),
+            "Binaries": os.path.join(project_path, "Binaries"),
+            ".vs": os.path.join(project_path, ".vs"),
+            "Global DDC": f"C:/Users/{user}/AppData/Local/UnrealEngine/Common/DerivedDataCache",
         }
 
-        LOGGER.debug(f"{folders=}")
-        return folders
+    # ===== ASYNC TASK WRAPPERS =====
+    def run_threaded_task(self, task_func, on_complete=None):
+        def task_wrapper():
+            task_func()
+            if on_complete:
+                self.after(0, on_complete)
+        threading.Thread(target=task_wrapper, daemon=True).start()
+
+    def delete_folder_threaded(self, folder_path, button, original_text):
+        button.configure(state="disabled", text="Deleting...")
+        task = lambda: self.delete_folder(folder_path)
+        on_complete = lambda: self.on_delete_finished(button, original_text)
+        self.run_threaded_task(task, on_complete)
+
+    def delete_all_temp_threaded(self, button, original_text):
+        button.configure(state="disabled", text="Deleting...")
+        on_complete = lambda: self.on_delete_finished(button, original_text)
+        self.run_threaded_task(self.delete_all_temp, on_complete)
+        
+    def on_delete_finished(self, button, original_text):
+        button.configure(text=original_text)
+        self._update_button_states()
 
     # ===== DELETE METHODS =====
-    def delete_folder(self, folder):
-        if os.path.exists(folder):
-            try:
-                shutil.rmtree(folder)
-                LOGGER.info(f"Deleted: {folder}")
-            except Exception as e:
-                LOGGER.error(f"Error deleting {folder}: {e}")
-        else:
-            LOGGER.error(f"Folder does not exist: {folder}")
+    def delete_folder(self, folder_path):
+        LOGGER.info(f"Attempting to delete folder: {folder_path}")
+        if not os.path.exists(folder_path):
+            LOGGER.warning(f"Folder not found, cannot delete: {folder_path}")
+            return
+        try:
+            shutil.rmtree(folder_path)
+            LOGGER.info(f"Successfully deleted: {folder_path}")
+        except Exception as e:
+            LOGGER.error(f"Error deleting {folder_path}: {e}")
 
     def delete_all_temp(self):
         for folder in self.temp_folders.values():
             self.delete_folder(folder)
 
     # ===== BUTTON STATE UPDATE =====
-    def _update_buttons(self):
-        # temp folders
-        for info in self.temp_buttons.values():
-            btn = info["button"]
-            folder = info["folder"]
-            if os.path.exists(folder):
-                btn.configure(state="normal", fg_color="#187e18")
-            else:
-                btn.configure(state="disabled", fg_color="#8a0000")
+    def _update_button_states(self):
+        # Temp folder buttons: Green if exists (deletable), Red if not
+        for name, info in self.temp_buttons.items():
+            if name == "Delete All": continue # Handled separately
+            exists = os.path.exists(info["folder"])
+            state = "normal" if exists else "disabled"
+            color = "#b83b3b" if exists else "#565b5f" # Red for danger, gray for disabled
+            info["button"].configure(state=state, fg_color=color)
+        
+        # "Delete All" button is active if any temp folder exists
+        any_temp_exists = any(os.path.exists(f) for f in self.temp_folders.values())
+        all_btn_state = "normal" if any_temp_exists else "disabled"
+        all_btn_color = "#b83b3b" if any_temp_exists else "#565b5f"
+        self.temp_buttons["Delete All"]["button"].configure(state=all_btn_state, fg_color=all_btn_color)
 
-        # project buttons
-        for info in self.project_buttons.values():
-            btn = info["button"]
-            keys = info["keys"]
-            if self._paths_exist(keys):
-                btn.configure(state="normal", fg_color="#187e18")
+        # General action buttons: Green if available, Gray if not
+        for name, info in self.buttons.items():
+            if ".ini" in name:
+                proj_path = self.paths.get("unreal_project", "")
+                exists = proj_path and os.path.exists(os.path.join(proj_path, "Config", name))
             else:
-                btn.configure(state="disabled", fg_color="#8a0000")
+                exists = self._paths_exist(info["keys"])
+            state = "normal" if exists else "disabled"
+            color = "#1f6aa5" if exists else "#565b5f"
+            info["button"].configure(state=state, fg_color=color)
 
-        self.after(10000, self._update_buttons)
+        self.after(5000, self._update_button_states)
 
     # ===== PROJECT ACTIONS =====
     def open_unreal(self):
-        subprocess.Popen([self.paths["unreal"], self.paths["unreal_project"]])
+        self.run_threaded_task(lambda: subprocess.Popen(
+            [self.paths["unreal"], self.paths["unreal_project_file"]]
+        ))
 
     def open_vs(self):
-        subprocess.Popen([self.paths["visual_studio"], self.paths["sln_file"]])
+        self.run_threaded_task(lambda: os.startfile(self.paths["sln_file"]))
 
     def open_vscode(self):
-        subprocess.Popen([self.paths["vscode"], self.paths["unreal_project"]])
+        self.run_threaded_task(lambda: subprocess.Popen(
+            [self.paths["vscode"], self.paths["unreal_project"]]
+        ))
 
     def open_explorer(self):
         subprocess.Popen(["explorer", self.paths["unreal_project"]])
 
     def open_terminal(self):
+        # This doesn't need a thread as it's instant
         subprocess.Popen(["cmd", "/K", f"cd /d {self.paths['unreal_project']}"])
+
+    def open_config_file(self, file_name):
+        config_path = os.path.join(self.paths.get("unreal_project", ""), "Config", file_name)
+        if os.path.exists(config_path):
+            self.run_threaded_task(lambda: os.startfile(config_path))
+        else:
+            LOGGER.error(f"Config file not found: {config_path}")
+
+    # ===== BUILD ACTIONS =====
+    def generate_project_files(self):
+        LOGGER.info("Starting: Generate project files...")
+        cmd = [self.paths["unreal"], self.paths["unreal_project_file"], "-projectfiles"]
+        self.run_threaded_task(lambda: subprocess.run(cmd, capture_output=True))
+        LOGGER.info("Completed: Generate project files.")
+
+    def build_project(self):
+        LOGGER.info("Starting: Build project...")
+        sln_path = self.paths.get("sln_file")
+        if not sln_path or not os.path.exists(sln_path):
+            LOGGER.error("Could not find .sln file to build.")
+            return
+        
+        # Assumes MSBuild is in PATH. A more robust solution would be to find it.
+        cmd = [
+            "msbuild", sln_path, 
+            "/p:Configuration=Development Editor", 
+            "/p:Platform=Win64", "/t:build"
+        ]
+        self.run_threaded_task(lambda: subprocess.run(cmd, capture_output=True))
+        LOGGER.info("Completed: Build project. Check logs for status.")
+
