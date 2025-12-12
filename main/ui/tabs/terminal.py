@@ -4,7 +4,6 @@ Terminal tab with non-blocking reader and basic ANSI SGR color handling.
 Works with pywinpty output that contains escape sequences (Clink, prompts, etc.)
 """
 
-import os
 import queue
 import re
 import threading

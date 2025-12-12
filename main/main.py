@@ -44,6 +44,7 @@ rootwin.title(CONFIG.get("app_title", "ERROR LOADING TITLE"))
 rootwin.geometry("800x930")
 rootwin.resizable(False, False)
 ctk.set_appearance_mode(CONFIG.get("mode", "dark"))
+ctk.set_default_color_theme("orange.json") 
 
 tabs = ctk.CTkTabview(rootwin)
 tabs.pack(expand=True, fill="both", padx=20, pady=20)
