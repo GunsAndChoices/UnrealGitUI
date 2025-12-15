@@ -1,167 +1,80 @@
 # UnrealGitUI
-UnrealGitUI is a graphical user interface (GUI) application designed to facilitate interaction with Git repositories, specifically tailored for Unreal Engine projects. It aims to simplify version control tasks for developers working within the Unreal Engine ecosystem.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Team
-    actor User
-    participant UI as UnrealGitUI
-    participant Git as Git Repository
-    participant UE as Unreal Engine Editor
-    participant GH as GitHub
-    participant AI as Google Gemini
+Kompakte Desktop-Anwendung zur Unterstützung von Git-Workflows in Unreal-Projekten. Dieses Repository bietet eine kleine UI, GitHub-Integrationen und Konfigurationswerkzeuge, die speziell auf die Bedürfnisse von Unreal-Entwickler*innen zugeschnitten sind.
 
-    %% Start
-    User ->> UI: Startet das Tool
+## Inhalt
+- Startpunkt: `run.py`
+- Hauptanwendung: `main/main.py`
+- Konfiguration: `main/config.py`, `main/config.json`
+- UI-Tabs: `ui/tabs/dashboard.py`, `ui/tabs/terminal.py`, `ui/tabs/unreal_tools.py`
+- GitHub-Tools: `main/github_tools/dashboard.py`, `main/github_tools/token.py`
+- Externe Widgets: `main/ctk_external_modules/CTkCollapsibleFrame.py`
+- Tests: `tests/test_config.py`
 
-    UI ->>+ Git: Pull und Sync, Pre-Launch Check
-    Git -->>- UI: Status zurück
-    UI ->> UI: Projektdatei prüfen und Konflikte prüfen
+## Features
+- Lokale UI für gängige Git-Aufgaben (Branching, Commit, Status)
+- Integration mit GitHub (Token-Management, Dashboard-Übersicht)
+- Konfigurierbar per JSON
+- Erweiterbare CTk-basierte Widgets
 
-    UI ->> UE: Öffnet Unreal Engine
+## Voraussetzungen
+- Python 3.8 oder neuer
+- Empfohlen: virtuelle Umgebung
 
-    UE -->> UI: Benutzer arbeitet im Editor
-    UE -->> Team: Team arbeitet im Editor
-    UE -->> UI: UE wird geschlossen
+## Installation
+1. Repository klonen:
 
-    UI ->> Git: git status
-    Git -->> UI: Geänderte Dateien
-    UI ->> Git: git add .
-    UI ->> Git: git commit
-
-    opt Commit Message per KI
-        UI ->> AI: Daten senden
-        AI ->> AI: Generiert Commit Message
-        AI ->> UI: Commit Message zurück
-    end
-
-    Git -->> UI: Commit erfolgreich
-
-    critical Push und PR
-        UI ->> Git: git push
-        Git -->> UI: Push erfolgreich
-
-        opt Auto Clean
-            UI ->> UI: Löscht unnötige Dateien
-        end
-
-        opt PR Erstellung
-            UI ->> GH: Branch und PR Daten
-            GH -->> UI: Bestätigung und PR Link
-            UI ->> Team: Neuer PR
-            GH -->> Team: PR Info und Review Link
-        end
-    option Push schlägt fehl
-        UI ->> UI: Meldet Fehler
-        UI ->> Team: Push Fehler Info
-    end
-
+```bash
+git clone <repo-url>
+cd UnrealGitUI
 ```
 
+2. Virtuelle Umgebung erstellen und aktivieren:
 
-## 📋 Tool-Checkliste: Professionelles Developer-Tool (Mini-IDE für Unreal-Git-Workflows)
+```bash
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# macOS / Linux
+source .venv/bin/activate
+```
 
-### I. 🚀 Kern-Workflow & Mechaniken
+3. Abhängigkeiten installieren (sofern erforderlich):
 
-Die Kernfunktion dreht sich um den **automatisierten Git–→Unreal–→Git–→PR Workflow**.
+```bash
+pip install -e .
+```
 
-- [ ] **Unreal Starten & Überwachen:**
-    - [ ] Unreal in einem Subprocess starten, ohne das Tool zu blockieren (`Popen`).
-    - [ ] Prozess überwachen: Wenn UE geschlossen wird, die nächsten Schritte triggern.
-    - [ ] Das Tool bleibt aktiv, während UE geöffnet ist.
-    - [ ] Reload-Funktion ermöglichen (UE mehrfach öffnen).
-- [ ] **Pre-Launch Checks (Vor dem Öffnen von UE):**
-    - [ ] Syncen (Pull).
-    - [ ] Check auf Konflikte anzeigen.
-    - [ ] Überprüfen, ob Projektdatei existiert und UE Editor Pfad gültig ist.
-    - [ ] Optional: Plugin-Aktivitätscheck.
-- [ ] **Post-Close Handling (Nach dem Schließen von UE):**
-    - [ ] Git Status abfragen und alle Änderungen sammeln.
-    - [ ] Alle Änderungen automatisch adden (`repo.git.add(A=True)`).
-    - [ ] Automatisches Committen ermöglichen (KI-Text, Timestamp, Pattern oder Benutzer-Input).
-    - [ ] Am Ende alles pushen.
-    - [ ] Optional: Auto Clean (löscht unnötige Dateien).
+## Schnellstart
+Die Anwendung lokal starten:
 
-### II. 🔗 GitHub & PR-Integration (Vollautomatisiert & Flexibel)
+```bash
+python run.py
+```
 
-- [ ] **GitHub Authentifizierung:**
-    - [ ] Option A: GitHub API Token (gespeichert in `settings.json`, verschlüsselt).
-    - [ ] Option B: GitHub CLI (`gh`), wenn installiert.
-- [ ] **PR-Erstellung (Pull Request):**
-    - [ ] Auto-PR Branch detection.
-    - [ ] Template-Support (konfigurierbar über Settings Tab).
-    - [ ] Möglichkeit, Labels auszuwählen.
-    - [ ] Möglichkeit, Reviewer hinzuzufügen.
-    - [ ] Milestones (optional).
-    - [ ] Wahl der Methode: PyGithub oder GitHub CLI (`gh pr create`).
-- [ ] **PR Preview:**
-    - [ ] Diff Summary abrufbar.
-    - [ ] Anzeige der Anzahl Dateien.
-    - [ ] Anklickbare Datei-Liste.
-    - [ ] Filesize warnings.
-- [ ] **CI/CD & Status:**
-    - [ ] Anzeigen von GitHub Actions Status.
-    - [ ] Build/CI Status für die aktuelle Branch anzeigen.
-    - [ ] Webhooks Integration (z.B. "Notify Discord" oder "Send Telegram Message", wenn PR erstellt).
+Konfiguration über `main/config.json` oder die Lader/Parser in `main/config.py`.
 
-### III. ✨ QOL & Power-Features
+## Tests
+Unit-Tests mit `pytest` ausführen:
 
-- [ ] **Automatisierung:**
-    - [ ] **Automatische Branch-Generierung** (z.B. `alex/ue-update/2025-11-16` oder `feature/alex-auto-generated-`).
-    - [ ] **Auto-Commit Message Vorschläge** (Lokale Heuristik oder GitHub Copilot API).
-    - [ ] **Auto-LFS Handling:**
-        - [ ] Warnung anzeigen, wenn große Assets hinzugefügt werden.
-        - [ ] Automatisch `git lfs track '*.uasset'` ausführen.
-        - [ ] LFS Quota anzeigen (via GitHub API).
-- [ ] **Inspektion & Sicherheit:**
-    - [ ] **Unreal File Change Inspector:** Änderungen in Kategorien sortieren (Blueprints, Materials, C++, Config, Plugins, Maps).
-    - [ ] Selektives Committen ermöglichen.
-    - [ ] "Safe Commit Mode" (Warnung, wenn mehr als X Dateien geändert oder kritische Ordner betroffen sind).
-    - [ ] Snapshot/Backup (ZIP oder Git Stash) vor dem Pull oder UE-Öffnen.
-- [ ] **Deep Features:**
-    - [ ] **Parallel Repo Support** (Liste aller Projekte / schnell switchen).
-    - [ ] **UE Build Automation Buttons** ("Build Game", "Build Editor", "Build Shader Cache").
-    - [ ] **Plugin Manager Tab** (Toggle-Funktion für aktivierte Plugins).
-    - [ ] **Unreal Profiling Hooks** (Start UE mit Memory/Performance/GPU Profiling Flags).
-    - [ ] Auto-Rebase w/ Protection (Verhindern von versehentlichem Pushen eines Konflikt-States).
+```bash
+pytest
+# gezielter Test
+pytest tests/test_config.py
+```
 
-### IV. 🖥️ UI-Konzept & Terminal
+## Entwicklung
+- UI-Änderungen in `ui/` vornehmen
+- GitHub-Logik in `main/github_tools/` pflegen
+- Neue Widgets in `main/ctk_external_modules/` ergänzen
+- Tests in `tests/` hinzufügen oder erweitern
 
-Das UI soll ein Fenster mit Sidebar Tabs und einer Terminal-Konsole unten verwenden.
+## Sicherheit
+- Tokens sicher aufbewahren und nie in Repositories committen. Verwende die Token-Hilfen in `main/github_tools/token.py`.
 
-- [ ] **UI Struktur:** Side Navigation Bar (Sidebar Tabs links).
-- [ ] **Tabs Implementierung:**
-    - [ ] Dashboard (Startseite, Statusanzeige, Konfliktindikator).
-    - [ ] Workflow (Wizard mit anklickbaren Steps).
-    - [ ] Git Tools (Manuelle Werkzeuge wie Branch wechseln, Stash, Cleanup).
-    - [ ] Unreal Tools (Projekt öffnen, temporäre Dateien löschen).
-    - [ ] Terminal.
-    - [ ] Settings.
-- [ ] **Workflow Tab Features:**
-    - [ ] Multi-Step Cards für jeden Schritt.
-    - [ ] Statusanzeige pro Step (Running, Done, Failed, Pending).
-    - [ ] Live Log-Ausgabe pro Step.
-    - [ ] Duration Timer.
-- [ ] **Eingebautes Developer Terminal:**
-    - [ ] Kein Wechsel zu PowerShell / Git Bash nötig.
-    - [ ] Live Output im Textfeld (scrollbar, farblich markiert).
-    - [ ] Tabs für mehrere Terminals.
-    - [ ] Presets für häufige Befehle (z.B. `git status`, `uebuild`).
-    - [ ] Bonus: "Pinned Commands" als Buttons speichern.
+## Mitwirken
+- Issues und Pull Requests sind willkommen – bitte beschreibe Änderungen kurz und liefere Tests für neue Logik.
 
-### V. ⚙️ Architektur & Tooling
+---
 
-- [ ] **Modularisierung:**
-    - [ ] Klare Trennung der Module (z.B. `/ui`, `/core/git`, `/core/unreal`, `/core/config`).
-- [ ] **Einstellungen und Konfiguration:**
-    - [ ] Konfigurationsdatei (`settings.json`).
-    - [ ] Speichern von Repo-Pfad, Unreal Pfad, Default Branch, GitHub Token.
-    - [ ] Option, Auto Commit / Auto PR zu aktivieren/deaktivieren.
-- [ ] **Portabilität (Optional):**
-    - [ ] Tool kompilieren (PyInstaller, Nuitka, oder Briefcase für GUI-native Bundles).
-    - [ ] Portabler `settings.json` Ordner.
-    - [ ] Portable GitHub Token Speicherung.
-
-# Google NotebookLM
-![https://notebooklm.google.com/notebook/33f767b7-0180-4c65-9a8c-514984dc34a4](https://notebooklm.google.com/notebook/33f767b7-0180-4c65-9a8c-514984dc34a4)
+Bei Fragen oder wenn du Hilfe beim Einrichten brauchst, öffne ein Issue oder kontaktiere die Maintainer.
