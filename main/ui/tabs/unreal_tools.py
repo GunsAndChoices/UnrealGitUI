@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+from CTkTable import CTkTable
 import customtkinter as ctk
 import threading
 
@@ -17,11 +18,39 @@ class UnrealToolsUI(ctk.CTkFrame):
         super().__init__(master, **kwargs)
         self.paths = CONFIG.get("paths", {})
         self.buttons = {} 
+        self.tick = "✔"
+        self.cross = "✘"
 
         # ===== TITLE =====
         title = ctk.CTkLabel(self, text="Unreal Engine Tools", font=("Segoe UI", 24, "bold"))
         title.pack(pady=(10, 15), fill="x")
-
+        
+        # ===== FOUND ENTRIES =====
+        found_frame = ctk.CTkFrame(self)
+        found_frame.pack(fill="x", padx=15, pady=(0, 10))
+        
+        data = [[]]
+        names = {
+                                "unreal": "Unreal",
+                                "unreal_project_file": "Unreal File",
+                                "sln_file": "SLN File",
+                                "vscode": "VSCode",
+                                "unreal_project": "Unreal Project",
+                                "visual_studio": "Visual Studio"
+                            }
+        for key, path in self.paths.items():
+            if self._paths_exist([key]):
+                data[0].append(f"{self.tick} {names.get(key, key.replace('_', ' ').title())}")
+            else:
+                data[0].append(f"{self.cross} {names.get(key, key.replace('_', ' ').title())}")
+        
+        entries_table = CTkTable(
+            found_frame, 
+            values=data, 
+            row= len(data)
+        )
+        entries_table.pack(fill="both", padx=5, pady=5, expand=True)
+        
         # ===== PROJECT ACTIONS =====
         project_panel = CTkCollapsiblePanel(self, title="Project Actions")
         project_panel.pack(fill="x", padx=15, pady=(0, 10))
